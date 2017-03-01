@@ -3,11 +3,12 @@ package com.github.charleslzq.loghub.binder;
 import com.aliyun.openservices.loghub.client.config.LogHubConfig;
 import com.github.charleslzq.integration.loghub.LogHubMessageDrivenChannelAdapter;
 import com.github.charleslzq.loghub.binder.config.*;
-import com.github.charleslzq.loghub.binder.extract.SpansExtractor;
 import com.github.charleslzq.loghub.config.LogConsumerConfig;
 import com.github.charleslzq.loghub.config.LogHubProducerProperties;
 import com.github.charleslzq.loghub.config.LogHubProjectConfig;
 import com.github.charleslzq.loghub.config.SourceType;
+import com.github.charleslzq.loghub.converter.DefaultLogConverter;
+import com.github.charleslzq.loghub.converter.LogConverter;
 import com.github.charleslzq.loghub.converter.LogItemConverter;
 import com.github.charleslzq.loghub.listener.ClientWorkerContainer;
 import com.github.charleslzq.loghub.producer.LogHubProducerFactory;
@@ -41,15 +42,13 @@ public class LogHubMessageChannelBinder
 		LogHubConsumerConfig,
 		LogHubProducerConfig> {
 	private final LogHubExtendedBindingProperties logHubExtendedBindingProperties;
-	private final SpansExtractor spansExtractor;
 	private LogHubProducerFactory producerFactory;
 	private String hostIp = "127.0.0.1";
 	private String hostName = "localhost";
 
-	public LogHubMessageChannelBinder(LogHubExtendedBindingProperties logHubExtendedBindingProperties, SpansExtractor spansExtractor) {
+	public LogHubMessageChannelBinder(LogHubExtendedBindingProperties logHubExtendedBindingProperties) {
 		super(true, new String[]{});
 		this.logHubExtendedBindingProperties = logHubExtendedBindingProperties;
-		this.spansExtractor = spansExtractor;
 	}
 
 	@Override
@@ -135,10 +134,18 @@ public class LogHubMessageChannelBinder
 			String group,
 			ConsumerDestination consumerDestination,
 			ExtendedConsumerProperties<LogHubConsumerConfig> logHubConsumerConfigExtendedConsumerProperties) {
-		LogConsumerConfig logConsumerConfig = generateConsumerProperty(destination, logHubConsumerConfigExtendedConsumerProperties.getExtension());
+		LogHubConsumerConfig logHubConsumerConfig = logHubConsumerConfigExtendedConsumerProperties.getExtension();
+		LogConsumerConfig logConsumerConfig = generateConsumerProperty(destination, logHubConsumerConfig);
 		LogHubConfig logHubConfig = logConsumerConfig.generateLogHubConfig(destination + "$" + group + System.currentTimeMillis());
+		LogConverter converter;
+		try {
+			converter = (LogConverter) Class.forName(logHubConsumerConfig.getConverter()).newInstance();
+		} catch (IllegalAccessException | InstantiationException | ClassNotFoundException e) {
+			e.printStackTrace();
+			converter = new DefaultLogConverter();
+		}
 		ClientWorkerContainer container = new ClientWorkerContainer(
-				spansExtractor,
+				converter,
 				new SimpleAsyncTaskExecutor(),
 				logHubConfig
 		);

@@ -1,6 +1,7 @@
 package com.github.charleslzq.loghub.binder.config;
 
 import com.aliyun.openservices.loghub.client.config.LogHubCursorPosition;
+import com.github.charleslzq.loghub.converter.DefaultLogConverter;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ public class LogHubConsumerConfig {
 	private String store;
 	private String group;
 	private List<String> topics = new ArrayList<>();
+	private String converter = DefaultLogConverter.class.getName();
 	private LogHubCursorPosition cursorPosition = LogHubCursorPosition.END_CURSOR;
 	private int startTime = 0;
 	private long fetchIntervalMillis = 200;
